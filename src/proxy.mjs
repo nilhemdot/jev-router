@@ -16,7 +16,7 @@ import { decide } from "./policy.mjs";
 import { log } from "./log.mjs";
 import { writeDecision, writeStatus } from "./status.mjs";
 
-const ANTHROPIC_BASE_URL = "https://api.anthropic.com";
+const ANTHROPIC_BASE_URL = process.env.JEV_UPSTREAM_URL || process.env.ANTHROPIC_BASE_URL || "https://api.anthropic.com";
 const debug = (line) => process.env.JEV_DEBUG && log(line);
 
 /**
