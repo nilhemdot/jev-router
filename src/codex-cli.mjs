@@ -53,6 +53,7 @@ export function resolveCodex() {
 }
 
 export const codexArgs = (baseURL, args) => [
+  "--no-daemon",
   ...(args.some((arg) => arg === "--model" || arg === "-m" || arg.startsWith("--model="))
     ? []
     : ["--model", CODEX_AUTO_MODEL]),
