@@ -70,10 +70,11 @@ function statusLineArgs() {
   return ["--settings", file];
 }
 
-// Existing environment variables win, followed by project-local, shared user-level, then
+// Existing environment variables win, followed by project-local, this checkout's .env, shared user-level, then
 // the legacy Claude-specific file.
 for (const file of [
   join(process.cwd(), ".env"),
+  join(ROOT, ".env"),
   join(homedir(), ".jev-router.env"),
   join(homedir(), ".jev-claude.env"),
 ]) {
@@ -138,7 +139,7 @@ if (process.env.JEV_API_KEY || process.env.TYPESAFE_API_KEY) {
 } else {
   process.stderr.write(
     `[jev] no JEV_API_KEY found - starting Claude Code without routing\n` +
-      `[jev] set it in ${join(homedir(), ".jev-claude.env")} to enable routing\n`,
+      `[jev] add JEV_API_KEY=... to ${join(homedir(), ".jev-router.env")} and restart jev-claude\n`,
   );
 }
 

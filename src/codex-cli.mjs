@@ -19,6 +19,7 @@ export function installCodexSkill(home = homedir()) {
 export function loadEnv() {
   for (const file of [
     join(process.cwd(), ".env"),
+    join(ROOT, ".env"),
     join(homedir(), ".jev-router.env"),
     join(homedir(), ".jev-claude.env"),
   ]) {
