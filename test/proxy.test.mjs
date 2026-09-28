@@ -221,6 +221,14 @@ test("reads a text block prompt as a new turn", () => {
   assert.equal(newTurnPrompt(body), "fix the bug");
 });
 
+test("skips trailing system messages carrying hook output", () => {
+  const body = withTools([
+    { role: "user", content: [{ type: "text", text: "fix the bug" }] },
+    { role: "system", content: [{ type: "text", text: "SessionStart hook success" }] },
+  ]);
+  assert.equal(newTurnPrompt(body), "fix the bug");
+});
+
 test("ignores a tool_result continuation mid-turn", () => {
   const body = withTools([
     { role: "user", content: "fix the bug" },

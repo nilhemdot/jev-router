@@ -51,10 +51,11 @@ export function sanitizeSchema(node) {
  * Jev on every tool call and let the model flip mid-task, so only the opening request of a
  * turn counts. Claude Code also injects `<system-reminder>` blocks into the user message,
  * which are noise to a router and measurably blunt Jev's confidence, so they are removed.
+ * Newer versions append hook output as trailing `system` messages, which are skipped too.
  */
 export function newTurnPrompt(body) {
   if (!Array.isArray(body?.tools) || body.tools.length === 0) return null; // auxiliary call
-  const last = body?.messages?.[body.messages.length - 1];
+  const last = body?.messages?.findLast((m) => m.role !== "system");
   if (!last || last.role !== "user") return null;
   let text;
   if (typeof last.content === "string") {
