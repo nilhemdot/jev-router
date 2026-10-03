@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawn } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync, accessSync, constants } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, rmSync, accessSync, constants } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -48,22 +48,37 @@ const savedModelBefore = readSavedModel();
  * replaces, but a status line the user configured themselves still takes priority: theirs
  * is a deliberate choice and silently overwriting it would be worse than showing nothing.
  */
-function statusLineArgs() {
-  if (process.env.JEV_NO_STATUSLINE) return [];
+function wantsStatusLine() {
+  if (process.env.JEV_NO_STATUSLINE) return false;
   for (const dir of [join(process.cwd(), ".claude"), join(homedir(), ".claude")]) {
     try {
-      if (JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")).statusLine) return [];
+      if (JSON.parse(readFileSync(join(dir, "settings.json"), "utf8")).statusLine) return false;
     } catch {
       // No settings file, or unreadable; nothing to preserve.
     }
   }
+  return true;
+}
+
+/**
+ * An `env` block in the user's settings.json beats the process environment, so a base URL
+ * set there (a local gateway, say) would silently send every request around the proxy and
+ * Claude Code would reject "jev-router" as an unknown model. Repeating the proxy URL in
+ * `--settings`, which outranks the user's file, is the only place it cannot be overridden.
+ */
+function settingsArgs(baseURL) {
+  const settings = { env: { ANTHROPIC_BASE_URL: baseURL } };
+  if (wantsStatusLine()) {
+    settings.statusLine = { type: "command", command: `"${process.execPath}" "${join(HERE, "jev-statusline.mjs")}"` };
+  }
   // Passed as a file rather than inline JSON: on Windows the args go through a shell, and a
   // JSON string containing its own quotes does not survive that.
-  const command = `"${process.execPath}" "${join(HERE, "jev-statusline.mjs")}"`;
-  const file = join(tmpdir(), "jev-claude", "settings.json");
+  // Per process, because the port differs between concurrent sessions; removed on exit.
+  const file = join(tmpdir(), "jev-claude", `settings-${process.pid}.json`);
+  process.on("exit", () => rmSync(file, { force: true }));
   try {
     mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, JSON.stringify({ statusLine: { type: "command", command } }));
+    writeFileSync(file, JSON.stringify(settings));
   } catch {
     return [];
   }
@@ -132,7 +147,7 @@ if (process.env.JEV_API_KEY || process.env.TYPESAFE_API_KEY) {
     close();
     restoreSavedModel(savedModelBefore);
   });
-  args.push(...statusLineArgs());
+  args.push(...settingsArgs(env.ANTHROPIC_BASE_URL));
   if (process.env.JEV_DEBUG && process.stdout.isTTY) {
     process.stderr.write(`[jev] routing decisions -> ${LOG_FILE}\n`);
   }
